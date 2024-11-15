@@ -1,3 +1,6 @@
+pip install flask twilio pandas openpyxl
+
+
 https://aa09-2804-7f3-4a10-87c8-c43e-83eb-af9a-338d.ngrok-free.app 
 
 ngrok config add-authtoken 2odDu4pqF56M3e0WbcMb5EkRvcL_6jb46Ad71MWgYg1EVu9sR
@@ -12,3 +15,4 @@ p/ rodar :
 2- ngrok http 5000
 
 postman:curl -X POST http://127.0.0.1:5000/bot -d "Body=iphone" -d "From=whatsapp:+SEU_NUMERO"
+
