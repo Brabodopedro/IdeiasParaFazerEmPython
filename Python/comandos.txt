@@ -11,7 +11,7 @@ ngrok http 5000
 
 p/ rodar :
 
-1- python bot.py
+1- flask run
 2- ngrok http 5000
 
 postman:curl -X POST http://127.0.0.1:5000/bot -d "Body=iphone" -d "From=whatsapp:+SEU_NUMERO"
