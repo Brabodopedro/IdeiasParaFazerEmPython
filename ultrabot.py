@@ -200,11 +200,11 @@ class ultraChatBot():
                             logging.info(f"Atualizando estado antigo para novo formato para {self.chatID}")
                             self.states[self.chatID] = {'state': self.states[self.chatID], 'last_interaction': time.time()}
                         
-                        # Verifica se passaram mais de 20 minutos desde a última interação
+                        # Verifica se passaram mais de 10 minutos desde a última interação
                         last_interaction = self.states[self.chatID].get('last_interaction', time.time())
                         elapsed_time = time.time() - last_interaction
-                        if elapsed_time > 1 * 60:
-                            # Mais de 20 minutos sem interação, resetar estado para 'INITIAL'
+                        if elapsed_time > 10 * 60:
+                            # Mais de 10 minutos sem interação, resetar estado para 'INITIAL'
                             self.states[self.chatID]['state'] = 'INITIAL'
                     
                     # Atualiza o timestamp da última interação
