@@ -83,14 +83,14 @@ class ultraChatBot():
             resultados = df[df['Modelo'].str.contains(model_name, case=False, na=False)]
             if not resultados.empty:
                 # Lista os modelos encontrados, enumerados
-                mensagem = "Encontramos os seguintes modelos:\n"
+                mensagem = "Temos os seguintes modelos disponíveis: \n"
                 modelos = []
                 for idx, (_, row) in enumerate(resultados.iterrows(), start=1):
                     modelo = row['Modelo']
                     cor = row['Cor']
                     condicao = row['Condição']
                     valor = row['Valor']
-                    mensagem += f"{idx} - Modelo: {modelo}, Cor: {cor}, Condição: {condicao}, Valor: R${valor}\n"
+                    mensagem += f"{idx} - Modelo: {modelo}, Cor: {cor}, Condição: {condicao}, Valor: R${valor} \n "
                     modelos.append(row.to_dict())
                 self.send_message(self.chatID, mensagem)
                 # Pergunta ao cliente para escolher um modelo, inclui N, M, S
