@@ -41,7 +41,7 @@ def webhook():
 
         # Instancie o bot com 'message_data'
         bot = ultraChatBot(message_data)
-        response = bot.Processingـincomingـmessages()
+        response = bot.Processing_incoming_messages()
         return jsonify({'status': 'sucesso', 'response': response}), 200
 
     except Exception as e:
