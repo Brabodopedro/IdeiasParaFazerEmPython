@@ -2,7 +2,7 @@ import speech_recognition as sr
 import os
 
 # Caminho para a pasta onde estão os arquivos .wav
-audio_folder = "/Users/macbookprodopedro/Documents/GitHub/IdeiasParaFazerEmPython/ConverterAudio"  # Substitua pelo caminho correto
+audio_folder = "ConverterAudio"  # Substitua pelo caminho correto
 
 # Inicializar o reconhecedor
 recognizer = sr.Recognizer()
