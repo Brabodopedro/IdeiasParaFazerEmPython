@@ -179,7 +179,8 @@ class ultraChatBot():
             logging.error(f"Erro ao ler a planilha: {e}")
             self.send_message(self.chatID, "Desculpe, ocorreu um erro ao buscar o modelo.")
             # Permanece no estado 'ASKED_MODEL_NAME'
-            
+
+    # Método para lidar com a escolha do número do modelo        
     def handle_model_number_choice(self, choice):
         choice = choice.strip().upper()
         if choice == 'N':
@@ -217,6 +218,7 @@ class ultraChatBot():
             except ValueError:
                 self.send_message(self.chatID, "Entrada inválida. Por favor, digite o número correspondente ao modelo desejado, ou escolha uma das opções enviadas.")
 
+    # Método para lidar com a confirmação da compra
     def handle_confirm_purchase(self, choice):
         choice = choice.strip().upper()
         if choice == 'SIM':
@@ -244,12 +246,99 @@ class ultraChatBot():
         else:
             self.send_message(self.chatID, "Opção inválida. Por favor, digite 'Sim' para confirmar a compra, ou escolha uma das opções enviadas.\nN - Escolher outro modelo\nM - Menu Principal\nS - Sair")
 
-    def handle_technical_assistance(self):
-        message = "Para assistência técnica, por favor descreva o problema que está enfrentando."
-        self.send_message(self.chatID, message)
-        # Você pode definir um novo estado para assistência técnica, se necessário
-        self.states[self.chatID]['state'] = 'TECH_ASSISTANCE'
+    # Método para lidar com a opção 2 - Assistência Técnica
+    def handle_technical_assistance_options(self):
+        options = (
+            "Por favor, selecione o tipo de serviço de assistência técnica que você precisa:\n"
+            "1️⃣ - Trocar Tela\n"
+            "2️⃣ - Trocar Bateria\n"
+            "3️⃣ - Trocar Tampa Traseira\n"
+            "4️⃣ - Outro Problema"
+        )
+        self.send_message(self.chatID, options)
+        self.states[self.chatID]['state'] = 'ASKED_TECH_OPTION'
         self.states[self.chatID]['last_interaction'] = time.time()
+        save_states(self.states)
+    
+    # Método para lidar com a escolha do serviço de assistência técnica
+    def handle_tech_option_choice(self, choice):
+        choice = choice.strip()
+        if choice in ['1', '2', '3']:
+            service_map = {'1': 'Tela', '2': 'Bateria', '3': 'Tampa'}
+            self.states[self.chatID]['service_type'] = service_map[choice]
+            self.send_message(self.chatID, "Por favor, informe o modelo do seu iPhone (exemplo: iPhone 12).")
+            self.states[self.chatID]['state'] = 'ASKED_PHONE_MODEL'
+            self.states[self.chatID]['last_interaction'] = time.time()
+            save_states(self.states)
+        elif choice == '4':
+            self.send_message(self.chatID, "Por favor, descreva o problema que está enfrentando.")
+            self.states[self.chatID]['state'] = 'ASKED_PROBLEM_DESCRIPTION'
+            self.states[self.chatID]['last_interaction'] = time.time()
+            save_states(self.states)
+        else:
+            self.send_message(self.chatID, "Opção inválida. Por favor, selecione uma das opções enviadas.")
+
+    # Método para lidar com o modelo do iPhone para reparo
+    def handle_phone_model(self, model_name):
+        service_type = self.states[self.chatID].get('service_type')
+        if not service_type:
+            self.send_message(self.chatID, "Desculpe, ocorreu um erro. Vamos começar novamente.")
+            self.handle_technical_assistance_options()
+            return
+
+        try:
+            df = pd.read_excel('reparo_iphones.xlsx')
+            df = df[['Modelo', 'Tela', 'Bateria', 'Tampa']]
+            df = df.dropna(subset=['Modelo'])
+
+            # Filtrar pelo modelo fornecido
+            matched_rows = df[df['Modelo'].str.contains(model_name, case=False, na=False)]
+            if matched_rows.empty:
+                self.send_message(self.chatID, f"Desculpe, não encontramos o modelo {model_name} em nosso sistema.")
+                self.send_message(self.chatID, "Por favor, informe o modelo novamente! ")
+                return
+
+            # Obter o preço do serviço selecionado
+            price = matched_rows.iloc[0][service_type]
+            if pd.isna(price):
+                self.send_message(self.chatID, f"Desculpe, não possuo o serviço de {service_type.lower()} para o modelo {model_name}.")
+                self.send_message(self.chatID, "Por favor, informe outro modelo ou peça um orçaento específico.")
+                self.handle_technical_assistance_options()
+                return
+
+            # Enviar o orçamento para o cliente
+            self.send_message(self.chatID, f"O valor para trocar a {service_type.lower()} do seu {model_name} é R$ {price:.2f}.")
+            self.send_message(self.chatID, "Deseja prosseguir com o serviço?\nResponda com:\nSim ✅\nNão ❌")
+            self.states[self.chatID]['state'] = 'ASKED_SERVICE_CONFIRMATION'
+            self.states[self.chatID]['last_interaction'] = time.time()
+            save_states(self.states)
+
+        except Exception as e:
+            logging.error(f"Erro ao acessar a planilha: {e}")
+            self.send_message(self.chatID, "Desculpe, ocorreu um erro ao acessar nossas informações. Por favor, tente novamente mais tarde.")
+
+    # Método para lidar com a confirmação do serviço de reparo
+    def handle_service_confirmation(self, confirmation):
+        confirmation = confirmation.strip().upper()
+        if confirmation in ['SIM', '✅']:
+            self.send_message(self.chatID, "Obrigado! Seu serviço foi agendado. Nossa equipe entrará em contato para mais detalhes.")
+            self.states[self.chatID]['state'] = 'FINISHED'
+            self.states[self.chatID]['pause_start_time'] = time.time()
+            save_states(self.states)
+        elif confirmation in ['NÃO', 'NAO', '❌']:
+            self.send_message(self.chatID, "Tudo bem! Se precisar de algo mais, estamos à disposição.")
+            self.states[self.chatID]['state'] = 'FINISHED'
+            self.states[self.chatID]['pause_start_time'] = time.time()
+            save_states(self.states)
+        else:
+            self.send_message(self.chatID, "Desculpe, não entendi. Por favor, responda com 'Sim' ou 'Não'.")
+    
+    # Método para lidar com a descrição de outro problema
+    def handle_problem_description(self, description):
+        # Aqui você pode salvar a descrição em algum lugar ou enviar para sua equipe
+        self.send_message(self.chatID, "Obrigado por nos informar. Nossa equipe técnica irá analisar e entraremos em contato com o orçamento em breve.")
+        self.states[self.chatID]['state'] = 'FINISHED'
+        self.states[self.chatID]['pause_start_time'] = time.time()
         save_states(self.states)
 
     def handle_talk_to_agent(self):
@@ -260,120 +349,67 @@ class ultraChatBot():
         self.states[self.chatID]['pause_start_time'] = time.time()
         save_states(self.states)
 
+        
+    # Método para processar as mensagens recebidas
     def Processing_incoming_messages(self):
-        message = self.message
-        if message:
-            if 'body' in message and 'from' in message:
-                text = message['body'].strip().upper()  # Captura o texto e padroniza para maiúsculas
-                logging.info(f"Mensagem recebida de {self.chatID}: '{text}'")
-                if not message.get('fromMe', False):  # Ignora mensagens enviadas pelo bot
-                    if self.chatID not in self.states:
-                        self.states[self.chatID] = {'state': 'INITIAL', 'last_interaction': time.time()}
-                        save_states(self.states)
-                    else:
-                        state = self.states[self.chatID]['state']
-                        logging.info(f"Estado atual de {self.chatID}: {state}")
-                        if state not in ['WAITING_FOR_AGENT', 'FINISHED', 'SESSION_ENDED']:
-                            self.states[self.chatID]['last_interaction'] = time.time()
-                        # Verifica se já se passaram 10 minutos de inatividade para resetar o estado
-                        last_interaction = self.states[self.chatID].get('last_interaction', time.time())
-                        if time.time() - last_interaction > 10 * 60 and state != 'SESSION_ENDED':
-                            self.states[self.chatID]['state'] = 'SESSION_ENDED'
-                            save_states(self.states)
-                            self.send_message(self.chatID, "Sua sessão foi encerrada por inatividade. Se precisar de algo, por favor, envie uma nova mensagem para iniciar um novo atendimento.")
+        user_message = self.message.get('body', '').strip()
+        if not user_message:
+            self.send_message(self.chatID, "Desculpe, não entendi sua mensagem.")
+            return
 
-                    state = self.states[self.chatID]['state']
+        if self.chatID not in self.states:
+            self.greet_and_ask_options()
+            return
 
-                    if state == 'SESSION_ENDED':
-                        # Reinicia a conversa
-                        self.states[self.chatID]['state'] = 'INITIAL'
-                        self.states[self.chatID]['last_interaction'] = time.time()
-                        save_states(self.states)
-                        self.send_greeting()
-                        self.send_options()
-                        return 'Session restarted after inactivity'
+        state_info = self.states[self.chatID]
+        state = state_info.get('state')
 
-                    if state == 'INITIAL':
-                        self.send_greeting()
-                        self.send_options()
-                        self.states[self.chatID]['state'] = 'ASKED_OPTION'
-                        self.states[self.chatID]['last_interaction'] = time.time()
-                        save_states(self.states)
-                        logging.info(f"Estado atualizado para 'ASKED_OPTION' para {self.chatID}")
-                        return 'Greeted and asked for options'
-
-                    elif state == 'ASKED_OPTION':
-                        # Processa a escolha do usuário
-                        if text in ['1', '1️⃣']:
-                            self.handle_buy_device()
-                            return 'Client chose to buy a device'
-                        elif text in ['2', '2️⃣']:
-                            self.handle_technical_assistance()
-                            return 'Client chose technical assistance'
-                        elif text in ['3', '3️⃣']:
-                            self.handle_talk_to_agent()
-                            return 'Client chose to talk to an agent'
-                        elif text in ['4', '4️⃣', 'S', 'E']:
-                            self.send_message(self.chatID, "Obrigado pelo contato. Se precisar de algo, estamos à disposição!")
-                            self.states[self.chatID]['state'] = 'FINISHED'
-                            self.states[self.chatID]['pause_start_time'] = time.time()
-                            save_states(self.states)
-                            return 'Client chose to exit'
-                        else:
-                            self.send_message(self.chatID, "Opção inválida. Por favor, responda com o número ou letra correspondente à sua escolha.")
-                            return 'Invalid option selected'
-
-                    elif state == 'ASKED_MODEL_NAME':
-                        # Processa o nome do modelo que o cliente quer comprar
-                        self.handle_model_search(text)
-                        return 'Searched and listed models for user to choose'
-
-                    elif state == 'ASKED_MODEL_NUMBER':
-                        # Processa a escolha do número do modelo
-                        self.handle_model_number_choice(text)
-                        return 'Handled model number choice'
-
-                    elif state == 'CONFIRM_PURCHASE':
-                        # Processa a confirmação de compra
-                        self.handle_confirm_purchase(text)
-                        return 'Handled purchase confirmation'
-
-                    elif state == 'TECH_ASSISTANCE':
-                        # Aqui você pode processar a mensagem do cliente relacionada à assistência técnica
-                        issue_description = text
-                        self.send_message(self.chatID, "Obrigado por nos informar. Nossa equipe de suporte entrará em contato em breve.")
-                        self.states[self.chatID]['state'] = 'FINISHED'
-                        # Define o início da pausa
-                        self.states[self.chatID]['pause_start_time'] = time.time()
-                        save_states(self.states)
-                        return 'Handled technical assistance'
-
-                    elif state == 'WAITING_FOR_AGENT' or state == 'FINISHED':
-                        # Verifica se já se passou 1 hora desde o início da pausa
-                        pause_duration = time.time() - self.states[self.chatID].get('pause_start_time', 0)
-                        if pause_duration >= 3600:
-                            # Mais de 1 hora se passou, o bot retoma o atendimento
-                            self.send_message(self.chatID, "Desculpe pela espera. Posso ajudar em algo?")
-                            self.send_options()
-                            self.states[self.chatID]['state'] = 'ASKED_OPTION'
-                            self.states[self.chatID].pop('pause_start_time', None)  # Remove o timestamp de pausa
-                            save_states(self.states)
-                            return 'Re-engaged after 1 hour pause'
-                        else:
-                            # Não responde durante a pausa
-                            return 'Paused, waiting for agent'
-
-                    else:
-                        # Estado desconhecido, resetar para 'INITIAL'
-                        self.states[self.chatID]['state'] = 'INITIAL'
-                        self.states[self.chatID].pop('pause_start_time', None)
-                        save_states(self.states)
-                        self.greet_and_ask_options()
-                        return 'Reset state and greeted with options'
-                else:
-                    return 'No action for messages sent by bot'
+        if state == 'ASKED_OPTION':
+            if user_message == '1':
+                self.handle_buy_device()
+            elif user_message == '2':
+                self.handle_technical_assistance_options()
+            elif user_message == '3':
+                self.handle_talk_to_agent()
+            elif user_message == '4':
+                self.send_message(self.chatID, "Obrigado pelo contato. Se precisar de algo, estamos à disposição!")
+                self.states[self.chatID]['state'] = 'FINISHED'
+                self.states[self.chatID]['pause_start_time'] = time.time()
+                save_states(self.states)
             else:
-                logging.error("Faltando 'body' ou 'from' nos dados da mensagem.")
-                return 'Erro: Dados da mensagem incompletos'
+                self.send_message(self.chatID, "Opção inválida. Por favor, selecione uma das opções enviadas.")
+
+        elif state == 'ASKED_MODEL_NAME':
+            self.handle_model_search(user_message)
+
+        elif state == 'ASKED_MODEL_NUMBER':
+            self.handle_model_number_choice(user_message)
+
+        elif state == 'CONFIRM_PURCHASE':
+            self.handle_confirm_purchase(user_message)
+
+        elif state == 'ASKED_TECH_OPTION':
+            self.handle_tech_option_choice(user_message)
+
+        elif state == 'ASKED_PHONE_MODEL':
+            self.handle_phone_model(user_message)
+
+        elif state == 'ASKED_SERVICE_CONFIRMATION':
+            self.handle_service_confirmation(user_message)
+
+        elif state == 'ASKED_PROBLEM_DESCRIPTION':
+            self.handle_problem_description(user_message)
+
+        elif state == 'WAITING_FOR_AGENT':
+            self.send_message(self.chatID, "Por favor, aguarde. Um atendente entrará em contato em breve.")
+
+        elif state == 'FINISHED':
+            # Reinicia a conversa ao receber uma nova mensagem
+            self.send_message(self.chatID, "Olá novamente! Como podemos te ajudar?")
+            self.send_options()
+            self.states[self.chatID]['state'] = 'ASKED_OPTION'
+            self.states[self.chatID]['last_interaction'] = time.time()
+            save_states(self.states)
         else:
-            return 'Nenhuma mensagem para processar'
+            self.send_message(self.chatID, "Desculpe, ocorreu um erro. Vamos começar novamente.")
+            self.greet_and_ask_options()

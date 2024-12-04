@@ -5,6 +5,8 @@ from ultrabot import ultraChatBot  # Certifique-se de que 'ultrabot.py' está no
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 import time
+import pandas as pd
+
 
 app = Flask(__name__)
 

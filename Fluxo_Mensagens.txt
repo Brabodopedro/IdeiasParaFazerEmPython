@@ -1,0 +1,28 @@
+Exemplo de Interação
+Compra de Aparelho:
+
+Bot: "Olá! Bem-vindo à nossa loja de celulares."
+Bot: "Como podemos te ajudar? Por favor, escolha uma das opções abaixo..."
+Usuário: "1"
+Bot: "Qual modelo de celular você está procurando? Por favor, digite o nome do modelo ou parte dele (exemplo: iPhone 12)."
+Usuário: "iPhone 12"
+Bot: Lista os modelos disponíveis com preços e características.
+Bot: "Por favor, digite o número do modelo que você deseja..."
+Usuário: "2"
+Bot: "Você escolheu o modelo: iPhone 12, Cor: Preto, Condição: Seminovo, Valor: R$ 4.999,99"
+Bot: "Você gostaria de prosseguir com a compra? Digite 'Sim' para confirmar, ou escolha uma opção: N - Escolher outro modelo, M - Menu Principal, S - Sair"
+Usuário: "Sim"
+Bot: "Obrigado por sua compra! Entraremos em contato para finalizar os detalhes."
+
+Assistência Técnica:
+
+Bot: "Como podemos te ajudar? Por favor, escolha uma das opções abaixo..."
+Usuário: "2"
+Bot: Apresenta as opções de serviços de assistência técnica.
+Usuário: "1"
+Bot: "Por favor, informe o modelo do seu iPhone (exemplo: iPhone 12)."
+Usuário: "iPhone 12"
+Bot: "O valor para trocar a tela do seu iPhone 12 é R$ 999,99."
+Bot: "Deseja prosseguir com o serviço? Responda com: ✅ Sim ❌ Não"
+Usuário: "Sim"
+Bot: "Obrigado! Seu serviço foi agendado. Nossa equipe entrará em contato para mais detalhes."
