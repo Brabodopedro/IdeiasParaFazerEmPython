@@ -1,17 +1,16 @@
 from flask import Flask, request, jsonify
 import logging
 import json
-from ultrabot import ultraChatBot  # Certifique-se que o nome do arquivo continua ultrabot.py ou ajuste aqui
+from ultrabot import load_states, save_states, send_message_api  # Apenas send_message_api aqui
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 import time
 import pandas as pd
+from ultrabot import ultraChatBot  # Certifique-se de importar a classe do ultrabot
 
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO)
-
-from ultrabot import load_states, save_states, send_message
 
 def check_inactive_conversations():
     try:
@@ -20,7 +19,8 @@ def check_inactive_conversations():
         for chatID, state_info in list(states.items()):
             last_interaction = state_info.get('last_interaction', current_time)
             if current_time - last_interaction > 10 * 60 and state_info['state'] != 'SESSION_ENDED':
-                send_message(chatID, "Sua sessão foi encerrada por inatividade. Se precisar de algo, por favor, envie uma nova mensagem para iniciar um novo atendimento.")
+                # Use send_message_api no lugar de send_message
+                send_message_api(chatID, "Sua sessão foi encerrada por inatividade. Se precisar de algo, por favor, envie uma nova mensagem para iniciar um novo atendimento.")
                 states[chatID]['state'] = 'SESSION_ENDED'
                 states[chatID]['pause_start_time'] = time.time()
         save_states(states)
@@ -43,22 +43,27 @@ def webhook():
             logging.error("Nenhum dado JSON recebido.")
             return jsonify({'error': 'Nenhum dado recebido'}), 400
 
-        if 'data' not in json_data:
-            logging.error("Faltando 'data' no JSON recebido.")
-            return jsonify({'error': 'Faltando dados no JSON'}), 400
+        if 'results' not in json_data or not json_data['results']:
+            logging.error("Faltando 'results' no JSON recebido.")
+            return jsonify({'error': 'Faltando results no JSON'}), 400
 
-        message_data = json_data['data']
+        result = json_data['results'][0]
 
-        logging.info(f"Tipo de message_data: {type(message_data)}")
-        logging.info(f"Conteúdo de message_data: {message_data}")
+        if 'content' not in result or not result['content']:
+            logging.error("Nenhuma mensagem no campo 'content'.")
+            return jsonify({'error': 'Faltando conteúdo da mensagem'}), 400
+        
+        user_message = result['content'][0].get('text')
+        sender = result.get('sender')
 
-        if isinstance(message_data, str):
-            logging.info("message_data é uma string, parseando como JSON")
-            message_data = json.loads(message_data)
+        if not user_message or not sender:
+            logging.error("Faltando 'sender' ou 'text' nos dados recebidos.")
+            return jsonify({'error': 'Faltando sender ou text nos dados'}), 400
 
-        if 'body' not in message_data or 'from' not in message_data:
-            logging.error("Faltando 'body' ou 'from' nos dados recebidos.")
-            return jsonify({'error': 'Faltando body ou from nos dados'}), 400
+        message_data = {
+            'body': user_message,
+            'from': sender
+        }
 
         bot = ultraChatBot(message_data)
         response = bot.Processing_incoming_messages()

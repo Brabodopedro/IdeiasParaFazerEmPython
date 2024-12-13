@@ -8,9 +8,9 @@ import time
 STATE_FILE = 'conversation_states.json'
 
 # Ajuste estas variáveis com seus dados Infobip
-INFOBIP_BASE_URL = "https://your-base-url.infobip.com"  # Substitua pelo seu
-INFOBIP_FROM_NUMBER = "whatsapp:+1234567890"  # Seu número aprovado pelo Infobip
-INFOBIP_AUTHORIZATION = "Bearer SEU_TOKEN_AQUI"  # Ajuste conforme seu método de auth
+INFOBIP_BASE_URL = "https://1gpzvn.api.infobip.com"  # Substitua pelo seu
+INFOBIP_FROM_NUMBER = "whatsapp:+447860099299"  # Seu número aprovado pelo Infobip (garantindo o "+" após whatsapp:)
+INFOBIP_AUTHORIZATION = "App 45b119a79c73e8df6a1d27d4d789217b-c1a2e88d-cf8e-486e-85fd-77b78e3bd5bb"  # Ajuste conforme seu método de auth
 
 def load_states():
     if os.path.exists(STATE_FILE):
@@ -39,7 +39,7 @@ def check_inactive_conversations():
                 continue
             last_interaction = state_info.get('last_interaction', current_time)
             if current_time - last_interaction > 10 * 60 and state_info['state'] != 'SESSION_ENDED':
-                send_message(chatID, "Sua sessão foi encerrada por inatividade. Se precisar de algo, por favor, envie uma nova mensagem para iniciar um novo atendimento.")
+                send_message_api(chatID, "Sua sessão foi encerrada por inatividade. Se precisar de algo, por favor, envie uma nova mensagem para iniciar um novo atendimento.")
                 states[chatID]['state'] = 'SESSION_ENDED'
                 states[chatID]['pause_start_time'] = time.time()
         save_states(states)
@@ -50,7 +50,10 @@ def save_states(states):
     with open(STATE_FILE, 'w') as f:
         json.dump(states, f)
 
-def send_message(chatID, text):
+def send_message_api(chatID, text):
+    # Garantir que o chatID esteja no formato correto
+    if chatID and not chatID.startswith("whatsapp:+"):
+        chatID = f"whatsapp:+{chatID}"
     data = {
         "from": INFOBIP_FROM_NUMBER,
         "to": chatID,
@@ -64,16 +67,28 @@ def send_message(chatID, text):
         'Authorization': INFOBIP_AUTHORIZATION
     }
     answer = requests.post(url, data=json.dumps(data), headers=headers)
+
+    # Logar a resposta da Infobip
+    logging.info(f"Enviando mensagem para {chatID}: '{text}'")
+    logging.info(f"Status code da Infobip: {answer.status_code}, Resposta: {answer.text}")
+
     return answer
 
 class ultraChatBot():
     def __init__(self, message_data):
         self.message = message_data
-        self.chatID = message_data.get('from')
+        raw_chat_id = message_data.get('from')
+        if raw_chat_id and not raw_chat_id.startswith("whatsapp:+"):
+            raw_chat_id = f"whatsapp:+{raw_chat_id}"
+            self.chatID = raw_chat_id
+
         self.states = load_states()
 
     def send_message(self, chatID, text):
-        return send_message(chatID, text)
+        # Garante que o chatID também esteja no formato correto
+        if chatID and not chatID.startswith("whatsapp:+"):
+            chatID = f"whatsapp:+{chatID}"
+        return send_message_api(chatID, text)
 
     def send_greeting(self):
         greeting = "Olá! Bem-vindo à nossa loja de celulares."
