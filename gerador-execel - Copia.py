@@ -4,10 +4,10 @@ import pandas as pd
 def gerar_excel_da_query():
     # Configurações de conexão
     conexao = mysql.connector.connect(
-        host='op_unb.vpshost3311.mysql.dbaas.com.br',
-        user='op_unb',
-        password='HaA1CWKLnI1y3!',
-        database='op_unb'
+        host='',
+        user='',
+        password='',
+        database=''
     )
 
     # A query completa com SUBSELECT, SUBSTRING_INDEX, etc.
